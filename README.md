@@ -1,6 +1,5 @@
 allegro
 =======
-
 Innovative open-source scripting language
 
 Designed scenarios
@@ -9,6 +8,10 @@ Designed scenarios
 * Experimenting with library functions
 * Hosted environment scripting, e.g. shell
 * Program shorthand during interactive sessions
+
+Though mainly drafted with CLI Base Class Library, **allegro** is a language 
+which is designed to be placed on top of any existing framework. Further 
+implementation of standard libraries opens for discussion.
 
 Grammar draft
 ------
@@ -42,7 +45,7 @@ call to type-check enabled function or CLR function.
         <statements>
         <variable-name> = <value>
 
-"hold" declaration can use anywhere just like variable. This statement will suspend 
+`hold` declaration can use anywhere just like variable. This statement will suspend 
 current evaluation and wait until the name assigned in the *sub-scope* following it.
 Interpreter will throw `CallNotFulfilledException`
 
@@ -97,7 +100,7 @@ Base Class Library have really long names indeed.
 
 ### Hosted enviroment
 
-allegro, if chosen as scripting language, exposes certain features to tighten intergation
+**allegro**, if chosen as scripting language, exposes certain features to tighten intergation
 between host and client. A hosting environment can programmatically insert class instances 
 in one or more `module`s into interpreter's scope, effectively enables interoped calls 
 between the two. **Security model of this interaction is yet to be discussed.**
