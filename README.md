@@ -3,6 +3,13 @@ allegro
 
 Innovative open-source scripting language
 
+Designed scenarios
+------
+* Quick but complicated task solving
+* Experimenting with library functions
+* Hosted environment scripting, e.g. shell
+* Program shorthand during interactive sessions
+
 Grammar draft
 ------
 
@@ -87,3 +94,17 @@ match at the beginning of the file.
 The `~` character automatically performs greedy match of current scope. This is useful 
 when you need to specify something like `ListViewVirtualItemsSelectionRangeChangedEventHandler` or so.
 Base Class Library have really long names indeed.
+
+### Hosted enviroment
+
+allegro, if chosen as scripting language, exposes certain features to tighten intergation
+between host and client. A hosting environment can programmatically insert class instances 
+in one or more `module`s into interpreter's scope, effectively enables interoped calls 
+between the two. **Security model of this interaction is yet to be discussed.**
+
+Participate
+------
+Please contact project author [RSChiang][rschiang] for participation. We will launch our
+mailing list before long.
+
+[rschiang]: http://www.plurk.com/RSChiang
