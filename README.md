@@ -47,7 +47,11 @@ call to type-check enabled function or CLR function.
 
 `hold` declaration can use anywhere just like variable. This statement will suspend 
 current evaluation and wait until the name assigned in the *sub-scope* following it.
-Interpreter will throw `CallNotFulfilledException`
+Interpreter will throw `CallNotFulfilledException` if the code tries to exit the 
+current scope without ever assigning the temporary variable. 
+**Note**: Usage like `try: egg = spam()` with `except Exception: continue` in a loop
+is considered valid and will not encounter this kind of error. `hold` must be used 
+with conscious in these scenarios, or might face undesired result.
 
     <statement> if <condition>
 
