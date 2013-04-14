@@ -147,7 +147,6 @@ namespace Allegro
                                 continue;
                             }
 
-                        state = (c < 0) ? State.Closed : State.LineBreak;
                         Current = new LexicalToken(LexicalTokenType.Comment, buf.ToString());
                         return true;
 
@@ -193,8 +192,6 @@ namespace Allegro
                             t.Tag = buf.ToString();
                             t.IndentLevel = indent;
                             Current = t;
-                            state = (c < 0) ? State.Closed : 
-                                        (IsLineBreak((char)c) ? State.LineBreak : State.Whitespace);
                             return true;
                         }
                 }
