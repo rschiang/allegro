@@ -20,20 +20,16 @@ Grammar draft
 
     import (<namespace>|<var>) [from <assembly>|<file>] [as <alternate-name>]
 
-    module <modulename>:
-        <import-statements>
-        <define-statements>
+    class <type-name>[ (<interfaces-or-base-type>, ... ) ]: <definitions>
 
-Module defines a pack of functions, also wraps CLR namespace into easy-memorable
-package names. Namespace-wide helper functions may also defined under `module` 
-statement, where interpreter will automatically read from `__global.al` below
-the current working directory.
-
-    def <method-name>[<arg-specifier>]: <statements>
+    def [<type>] <field-name>
+	def [<type>] <property-name>:
+		[get: <statements>][set: <statements>] | pass
+    def [<type>] <method-name>[<arg-specifier>]: <statements>
 
 Brackets can be omitted if no arguments specified.
 
-    <arg-specifier>: ( <identifier> [:<type>| (<type1>, <type2>, ...) ] [=<default-value>], ... )
+    <arg-specifier>: ( [<type>| (<type1>, <type2>, ...) ] <identifier> [=<default-value>], ... )
 
 Which means type-checking can be enabled by appending `:`, then a type or a tuple of 
 types. Interpreter will automatically throw TypeException if type mismatch during a 
@@ -41,23 +37,19 @@ call to type-check enabled function or CLR function.
 
 ### Expressions
 
-    (... hold <variable-name> ...)
-        <statements>
-        <variable-name> = <value>
+    await <variable-name>
 
-`hold` declaration can use anywhere just like variable. This statement will suspend 
-current evaluation and wait until the name assigned in the *sub-scope* following it.
-Interpreter will throw `CallNotFulfilledException` if the code tries to exit the 
-current scope without ever assigning the temporary variable. 
-**Note**: Usage like `try: egg = spam()` with `except Exception: continue` in a loop
-is considered valid and will not encounter this kind of error. `hold` must be used 
-with conscious in these scenarios, or might face undesired result.
+`await` declaration can be used in combination with a valid identifier anywhere just like 
+normal variable. This statement will suspend the evaluation until a variable with an 
+exact identifier was assigned in the current scope or sub-scope. The runtime should 
+throw a `CallNotFulfilledException` if the code tries to exit the current scope 
+without ever assigning the temporary variable. 
 
     <statement> if <condition>
 
 Syntax sugar for `if <condition>: <statement>`.
 
-    /<regular-expression>/<params>
+    $/<regular-expression>/<params>
 
 Similar to JavaScript's terminology, everything except `//` will be treated literally
 as the argument to [System.Text.RegularExpressions.Regex][regex], while params contains 
@@ -77,7 +69,7 @@ and so on.
 
     <statement> then <statement>
 
-Line-join, just like ` _` in VB.
+Line-join, just like `:` in VB.
 
     folder_path = "C:\Users\Public"
     message = 'Access denied.\r\n'
@@ -85,10 +77,6 @@ Line-join, just like ` _` in VB.
 Single quote allows escape characters, while double quotes don't.
 
 ### Scripting functionalities
-
-Some syntax is recommended for use in interactive environments, but not recommended for 
-production use. These syntaxes are aimed to help speed-up on-demand scripting, and is 
-encouraged to be implemented as shell language.
 
     def func(): return 1
     PRINT(Func())           # Gets 1 in output
@@ -102,15 +90,32 @@ The `~` character automatically performs greedy match of current scope. This is 
 when you need to specify something like `ListViewVirtualItemsSelectionRangeChangedEventHandler` or so.
 Base Class Library have really long names indeed.
 
+Some syntax is recommended for use in interactive environments, but not recommended for 
+production use since effects of these statements in a compilation scenario are undefined. 
+These syntaxes are aimed to help speed-up on-demand scripting, and is encouraged to be 
+implemented as shell language.
+
 ### Hosted enviroment
 
 **allegro**, if chosen as scripting language, exposes certain features to tighten intergation
-between host and client. A hosting environment can programmatically insert class instances 
-in one or more `module`s into interpreter's scope, effectively enables interoped calls 
+between host and client. 
+
+    require <host-feature>
+
+The `require` statement could be used to instruct the hosting intepreter or 
+application to enable / include additional support for a requested functionality.
+
+A hosting environment can register additional classes and/or global functions 
+into current interpreter's scope, effectively enables interoped calls 
 between the two. **Security model of this interaction is yet to be discussed.**
 
+Implementations
+---------------
+***Allegro#*** is the current intepreter implementation written in C#.
+A C-based intepreter has been proposed but projected in further milestone.
+
 Participate
-------
+-----------
 Please contact project author [RSChiang][rschiang] for participation. We will launch our
 mailing list before long.
 
