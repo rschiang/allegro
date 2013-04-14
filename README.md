@@ -22,16 +22,18 @@ Grammar draft
 
     class <type-name>[ (<interfaces-or-base-type>, ... ) ]: <definitions>
 
+Brackets can be omitted to create a blank class with no interface implementation.
+
     def [<type>] <field-name>
 	def [<type>] <property-name>:
 		[get: <statements>][set: <statements>] | pass
-    def [<type>] <method-name>[<arg-specifier>]: <statements>
 
-Brackets can be omitted if no arguments specified.
+Thus can easily expand a field member to an instance property.
 
-    <arg-specifier>: ( [<type>| (<type1>, <type2>, ...) ] <identifier> [=<default-value>], ... )
+    def [<type>] <method-name>( [<arguments>] ): <statements>
+    <arguments>: [<type> | (<type1>, <type2>, ...) ] <identifier> [=<default-value>], ...
 
-Which means type-checking can be enabled by appending `:`, then a type or a tuple of 
+Which means type-checking can be enabled by prepending a type or a tuple of 
 types. Interpreter will automatically throw TypeException if type mismatch during a 
 call to type-check enabled function or CLR function.
 
