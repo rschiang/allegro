@@ -24,6 +24,8 @@ namespace Allegro
             lastToken = new LexicalToken();
             ReadState = ReadState.Initial;
             Current = new LexicalToken();
+            Line = 1;
+            Column = 1;
         }
         #endregion
 
@@ -37,10 +39,11 @@ namespace Allegro
             StringBuilder buf = new StringBuilder(16);
             State state = State.Open;
             int indent = 0;
+            object tag = null;
 
             while (state != State.Closed)
             {
-                int c = sourceBuffer.Peek();
+                int c = sourceBuffer.Peek(), ahead;
                 ReadState = ReadState.Interactive;
 
                 switch (state)
@@ -53,7 +56,7 @@ namespace Allegro
 
                         if (c == '#') {
                             state = State.Comment;
-                            sourceBuffer.Read();
+                            ReadChar();
                             continue;
                         }
 
@@ -68,8 +71,21 @@ namespace Allegro
                             continue;
                         }
 
-                        if (Array.IndexOf(lineTerminators, (char)c) >= 0) {
-                            state = State.Whitespace;
+                        if (c == '$') {
+                            ReadChar();
+                            ahead = sourceBuffer.Peek();
+                            if (ahead != '/') {
+                                ReadState = ReadState.Error;
+                                throw new SyntaxException("Regular expression expected");
+                            }
+                            ReadChar();
+                            tag = null;
+                            state = State.RegularExpression;
+                            continue;
+                        }
+
+                        if (IsLineBreak((char)c)) {
+                            state = State.LineBreak;
                             continue;
                         }
 
@@ -77,7 +93,7 @@ namespace Allegro
                             if (lastToken.Type == LexicalTokenType.LineBreak)
                                 state = State.Whitespace; // Calculate indent
                             else
-                                sourceBuffer.Read(); // Consume additional whitespace on Open
+                                ReadChar(); // Consume additional whitespace on Open
 
                             continue;
                         }
@@ -88,11 +104,13 @@ namespace Allegro
                     case State.LineBreak:
                         // This state only gets called whenever a line break is detected by other states
                         sourceBuffer.Read();
-                        int ahead = sourceBuffer.Peek();
+                        ahead = sourceBuffer.Peek();
                         if ((c == '\u000d') && (ahead == '\u000a'))
                             sourceBuffer.Read(); // Consume additional line break character
 
-                        NextToken(new LexicalToken(LexicalTokenType.LineBreak));
+                        Current = new LexicalToken(LexicalTokenType.LineBreak);
+                        Line++;
+                        Column = 1;
                         return true;
 
                     case State.Whitespace:
@@ -102,19 +120,20 @@ namespace Allegro
                         }
 
                         if ((c == '\u0009') || (c == '\u000b') || (c == '\u000c')) {
-                            sourceBuffer.Read();
+                            ReadChar();
                             indent++;
                             continue;
                         }
 
                         if (CharUnicodeInfo.GetUnicodeCategory((char)c) == UnicodeCategory.SpaceSeparator) {
-                            sourceBuffer.Read();
-                            buf.Append((char)c);
+                            buf.Append(ReadChar());
                             continue;
                         }
 
-                        if ((buf.Length % 4) != 0)
+                        if ((buf.Length % 4) != 0) {
+                            ReadState = ReadState.Error;
                             throw new SyntaxException("Whitespaces except tabs must be a multiple of 4");
+                        }
 
                         indent += (buf.Length / 4);
                         state = State.Open;
@@ -122,21 +141,62 @@ namespace Allegro
 
                     case State.Comment:
                         // Calling this state will eat up all remaining characters on this line
-                        if ((c >= 0) && (Array.IndexOf(lineTerminators, (char)c) < 0)) {
-                            buf.Append((char)c);
-                            continue;
-                        }
-                        else {
-                            state = (c < 0) ? State.Closed : State.LineBreak;
-                            NextToken(new LexicalToken(LexicalTokenType.Comment, buf.ToString()));
-                            return true;
-                        }
+                        if (c >= 0)
+                            if (!IsLineBreak((char)c)) {
+                                buf.Append(ReadChar());
+                                continue;
+                            }
+
+                        state = (c < 0) ? State.Closed : State.LineBreak;
+                        Current = new LexicalToken(LexicalTokenType.Comment, buf.ToString());
+                        return true;
 
                     case State.Token:
                         break;
 
                     case State.Directive:
                         break;
+
+                    case State.RegularExpression:
+                        if (tag == null) {
+                            if (c > 0)
+                                if (c == '/') {
+                                    ReadChar();
+                                    tag = buf.ToString();
+                                    buf = new StringBuilder(4);
+                                    continue;
+                                }
+                                else
+                                    if (!IsLineBreak((char)c)) {
+                                        buf.Append(ReadChar());
+                                        continue;
+                                    }
+
+                            ReadState = ReadState.Error;
+                            throw new SyntaxException("Newline in constant");
+                        }
+                        else {
+                            if (c >= 0) {
+                                char ch = (char)c;
+                                if (IsRegexOption(ch)) {
+                                    buf.Append(ReadChar());
+                                    continue;
+                                }
+                                if (!IsWhitespace(ch) && !IsLineBreak(ch)) {
+                                    ReadState = ReadState.Error;
+                                    throw new SyntaxException("Expect a valid regular expression options flag");
+                                }
+                            }
+
+                            LexicalToken t = new LexicalToken(LexicalTokenType.RegularExpression);
+                            t.Value = (string)tag;
+                            t.Tag = buf.ToString();
+                            t.IndentLevel = indent;
+                            Current = t;
+                            state = (c < 0) ? State.Closed : 
+                                        (IsLineBreak((char)c) ? State.LineBreak : State.Whitespace);
+                            return true;
+                        }
                 }
             }
 
@@ -169,13 +229,34 @@ namespace Allegro
         }
 
         /// <summary>
-        /// Advances to the next token.
+        /// Determines if the character is a valid line break character.
         /// </summary>
-        /// <param name="t">New token read from <c>Read</c> method.</param>
-        protected virtual void NextToken(LexicalToken t)
+        /// <param name="c">Character to check.</param>
+        /// <returns><c>true</c> if the character is one of the allowed line break character, 
+        /// otherwise, <c>false</c>.</returns>
+        protected virtual bool IsLineBreak(char c)
         {
-            lastToken = Current;
-            Current = t;
+            return Array.IndexOf(lineTerminators, c) >= 0;
+        }
+
+        /// <summary>
+        /// Determines if the character is a valid regular expression options flag.
+        /// </summary>
+        /// <param name="c">Character to check.</param>
+        /// <returns><c>true</c> if the character is one of the allowed regular expression 
+        /// options flag, otherwise, <c>false</c>.</returns>
+        protected virtual bool IsRegexOption(char c)
+        {
+            return (c == 'c') || (c == 'i') || (c == 's') || (c == 'm') || (c == 'w');
+        }
+
+        /// <summary>
+        /// Reads and returns the next character from stream.
+        /// </summary>
+        protected char ReadChar()
+        {
+            Column++;
+            return (char)sourceBuffer.Read();
         }
         #endregion
 
@@ -188,7 +269,25 @@ namespace Allegro
         /// <summary>
         /// Gets the latest token read from the source.
         /// </summary>
-        public virtual LexicalToken Current { get; protected set; }
+        public virtual LexicalToken Current
+        {
+            get { return _current; }
+            protected set
+            {
+                lastToken = _current;
+                _current = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the current line number.
+        /// </summary>
+        public virtual int Line { get; protected set; }
+
+        /// <summary>
+        /// Gets the current column number.
+        /// </summary>
+        public int Column { get; protected set; }
         #endregion
 
         #region "Fields"
@@ -201,6 +300,8 @@ namespace Allegro
         /// Holds the latest token ever read.
         /// </summary>
         protected LexicalToken lastToken;
+
+        private LexicalToken _current;
         #endregion
 
         #region "Static Fields"
@@ -217,6 +318,7 @@ namespace Allegro
             Whitespace,
             Token,
             Directive,
+            RegularExpression,
         }
         #endregion
 
