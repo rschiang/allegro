@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Allegro.Linguistics", "Allegro.Linguistics\Allegro.Linguistics.csproj", "{AA6E591C-1797-4890-A8F0-0D59F3836357}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Allegro.Scripting", "Allegro.Scripting\Allegro.Scripting.csproj", "{9559227E-7ED1-4DB2-8950-B275AE2C9ACB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AA6E591C-1797-4890-A8F0-0D59F3836357}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA6E591C-1797-4890-A8F0-0D59F3836357}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA6E591C-1797-4890-A8F0-0D59F3836357}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA6E591C-1797-4890-A8F0-0D59F3836357}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9559227E-7ED1-4DB2-8950-B275AE2C9ACB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9559227E-7ED1-4DB2-8950-B275AE2C9ACB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9559227E-7ED1-4DB2-8950-B275AE2C9ACB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9559227E-7ED1-4DB2-8950-B275AE2C9ACB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
