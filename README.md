@@ -78,13 +78,17 @@ Line-join, just like `:` in VB.
 
 Single quote allows escape characters, while double quotes don't.
 
-### Scripting functionalities
+Scripting
+---------
+Additional syntaxes are available in interactive environments such as intepreter.
+They are conventions aligned to *allegro*'s design concept, which should be 
+implemented in all scripting scenarios but remain optional for compilers and/or 
+other strict-enforcing occasions.
 
     def func(): return 1
     PRINT(Func())           # Gets 1 in output
 
-Except certain cases, the interpreter is case-insensitive unless you demand a `.strict`
-match at the beginning of the file.
+Except certain cases, the interpreter is case-insensitive.
 
     input = conso~.r~line()
 
@@ -92,10 +96,9 @@ The `~` character automatically performs greedy match of current scope. This is 
 when you need to specify something like `ListViewVirtualItemsSelectionRangeChangedEventHandler` or so.
 Base Class Library have really long names indeed.
 
-Some syntax is recommended for use in interactive environments, but not recommended for 
-production use since effects of these statements in a compilation scenario are undefined. 
-These syntaxes are aimed to help speed-up on-demand scripting, and is encouraged to be 
-implemented as shell language.
+These syntaxes are aimed to help speeding-up on-demand scripting, and is encouraged to be 
+implemented as shell language. In formal **allegro** code files, however, you can define 
+the directive `.strict` at the beginning of code file.
 
 ### Hosted enviroment
 
@@ -113,7 +116,7 @@ between the two. **Security model of this interaction is yet to be discussed.**
 
 Implementations
 ---------------
-***Allegro#*** is the current intepreter implementation written in C#.
+**Allegro#** is the current intepreter implementation written in C#.
 A C-based intepreter has been proposed but projected in further milestone.
 
 Participate
