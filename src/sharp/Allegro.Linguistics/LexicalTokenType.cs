@@ -13,24 +13,14 @@ namespace Allegro
         None = 0,
 
         /// <summary>
-        /// An identifier.
+        /// Line break.
         /// </summary>
-        Identifier,
+        LineBreak,
 
         /// <summary>
-        /// A recognized keyword of Allegro without escaping.
+        /// Whitespace.
         /// </summary>
-        Keyword,
-
-        /// <summary>
-        /// A recognized operator of Allgero.
-        /// </summary>
-        Operator,
-
-        /// <summary>
-        /// String literal.
-        /// </summary>
-        Literal,
+        Whitespace,
 
         /// <summary>
         /// Code comment.
@@ -41,6 +31,36 @@ namespace Allegro
         /// Preprocessor directives.
         /// </summary>
         Directive,
+
+        /// <summary>
+        /// An identifier.
+        /// </summary>
+        Identifier,
+
+        /// <summary>
+        /// A recognized keyword of Allegro without escaping.
+        /// </summary>
+        Keyword,
+
+        /// <summary>
+        /// Integer literal.
+        /// </summary>
+        IntegerLiteral,
+
+        /// <summary>
+        /// Real number literal.
+        /// </summary>
+        RealLiteral,
+
+        /// <summary>
+        /// String literal.
+        /// </summary>
+        StringLiteral,
+
+        /// <summary>
+        /// A recognized operator of Allgero.
+        /// </summary>
+        Operator,
 
         /// <summary>
         /// Regular expression literal of Allegro.

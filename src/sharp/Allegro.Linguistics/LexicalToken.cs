@@ -15,6 +15,20 @@ namespace Allegro
         /// </summary>
         public LexicalToken()
         {
+            Type = LexicalTokenType.None;
+            Value = null;
+            Tag = null;
+        }
+
+        /// <summary>
+        /// Creates an instance of <c>LexicalToken</c> with specified type.
+        /// </summary>
+        /// <param name="type">Type of token.</param>
+        public LexicalToken(LexicalTokenType type)
+        {
+            Type = type;
+            Value = null;
+            Tag = null;
         }
 
         /// <summary>
