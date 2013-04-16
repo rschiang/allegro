@@ -117,7 +117,7 @@ between the two. **Security model of this interaction is yet to be discussed.**
 Implementations
 ---------------
 **Allegro#** is the current intepreter implementation written in C#.
-A C-based intepreter has been proposed but projected in further milestone.
+A C-based intepreter has been proposed but projected in further milestone. For static solutions, LLVM might be a good compilation target.
 
 Participate
 -----------
