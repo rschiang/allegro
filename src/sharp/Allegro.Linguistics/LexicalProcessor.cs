@@ -151,9 +151,11 @@ namespace Allegro
                         return true;
 
                     case State.Token:
+                        // TODO: Split between operators, keywords, and identifiers
                         break;
 
                     case State.Directive:
+                        // TODO: Preprocessor directive
                         break;
 
                     case State.RegularExpression:
@@ -180,10 +182,6 @@ namespace Allegro
                                 if (IsRegexOption(ch)) {
                                     buf.Append(ReadChar());
                                     continue;
-                                }
-                                if (!IsWhitespace(ch) && !IsLineBreak(ch)) {
-                                    ReadState = ReadState.Error;
-                                    throw new SyntaxException("Expect a valid regular expression options flag");
                                 }
                             }
 
@@ -244,7 +242,7 @@ namespace Allegro
         /// options flag, otherwise, <c>false</c>.</returns>
         protected virtual bool IsRegexOption(char c)
         {
-            return (c == 'c') || (c == 'i') || (c == 's') || (c == 'm') || (c == 'w');
+            return (('a' <= c) && (c <= 'z')) || (('A' <= c) && (c <= 'Z'));
         }
 
         /// <summary>
