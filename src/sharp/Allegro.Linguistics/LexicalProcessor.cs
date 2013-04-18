@@ -20,182 +20,75 @@ namespace Allegro
         public LexicalProcessor(TextReader source)
         {
             if (source == null) throw new ArgumentNullException("source");
+            _state = State.Initial;
             sourceBuffer = source;
-            lastToken = new LexicalToken();
-            ReadState = ReadState.Initial;
-            Current = new LexicalToken();
-            Line = 1;
-            Column = 1;
         }
         #endregion
 
         #region "Methods"
+
         /// <summary>
         /// Reads the next token from stream.
         /// </summary>
         /// <returns><c>true</c> if the next token was read successfully; otherwise, <c>false</c>.</returns>
         public virtual bool Read()
         {
-            StringBuilder buf = new StringBuilder(16);
-            State state = State.Open;
-            int indent = 0;
-            object tag = null;
+            if (_state == State.Initial) {
+                _textBuffer = new StringBuilder(16);
+                _indentLevel = 0;
+                _current = new LexicalToken();
+                lastToken = new LexicalToken();
+                Line = 1;
+                Column = 1;
 
-            while (state != State.Closed)
-            {
-                int c = sourceBuffer.Peek(), ahead;
-                ReadState = ReadState.Interactive;
-
-                switch (state)
-                {
-                    case State.Open:
-                        if (c < 0) {
-                            state = State.Closed;
-                            continue;
-                        }
-
-                        if (c == '#') {
-                            state = State.Comment;
-                            ReadChar();
-                            continue;
-                        }
-
-                        if (c == '.') {
-                            if (lastToken.Type != LexicalTokenType.LineBreak) {
-                                ReadState = ReadState.Error;
-                                throw new SyntaxException("Preprocessor directives must appear as " +
-                                                          "the first non-whitespace character on a line");
-                            }
-
-                            state = State.Directive;
-                            continue;
-                        }
-
-                        if (c == '$') {
-                            ReadChar();
-                            ahead = sourceBuffer.Peek();
-                            if (ahead != '/') {
-                                ReadState = ReadState.Error;
-                                throw new SyntaxException("Regular expression expected");
-                            }
-                            ReadChar();
-                            tag = null;
-                            state = State.RegularExpression;
-                            continue;
-                        }
-
-                        if (IsLineBreak((char)c)) {
-                            state = State.LineBreak;
-                            continue;
-                        }
-
-                        if (IsWhitespace((char)c)) {
-                            if (lastToken.Type == LexicalTokenType.LineBreak)
-                                state = State.Whitespace; // Calculate indent
-                            else
-                                ReadChar(); // Consume additional whitespace on Open
-
-                            continue;
-                        }
-
-                        state = State.Token;
-                        break;
-
-                    case State.LineBreak:
-                        // This state only gets called whenever a line break is detected by other states
-                        sourceBuffer.Read();
-                        ahead = sourceBuffer.Peek();
-                        if ((c == '\u000d') && (ahead == '\u000a'))
-                            sourceBuffer.Read(); // Consume additional line break character
-
-                        Current = new LexicalToken(LexicalTokenType.LineBreak);
-                        Line++;
-                        Column = 1;
-                        return true;
-
-                    case State.Whitespace:
-                        if (c < 0) {
-                            state = State.Closed;
-                            continue;
-                        }
-
-                        if ((c == '\u0009') || (c == '\u000b') || (c == '\u000c')) {
-                            ReadChar();
-                            indent++;
-                            continue;
-                        }
-
-                        if (CharUnicodeInfo.GetUnicodeCategory((char)c) == UnicodeCategory.SpaceSeparator) {
-                            buf.Append(ReadChar());
-                            continue;
-                        }
-
-                        if ((buf.Length % 4) != 0) {
-                            ReadState = ReadState.Error;
-                            throw new SyntaxException("Whitespaces except tabs must be a multiple of 4");
-                        }
-
-                        indent += (buf.Length / 4);
-                        state = State.Open;
-                        break;
-
-                    case State.Comment:
-                        // Calling this state will eat up all remaining characters on this line
-                        if (c >= 0)
-                            if (!IsLineBreak((char)c)) {
-                                buf.Append(ReadChar());
-                                continue;
-                            }
-
-                        Current = new LexicalToken(LexicalTokenType.Comment, buf.ToString());
-                        return true;
-
-                    case State.Token:
-                        // TODO: Split between operators, keywords, and identifiers
-                        break;
-
-                    case State.Directive:
-                        // TODO: Preprocessor directive
-                        break;
-
-                    case State.RegularExpression:
-                        if (tag == null) {
-                            if (c > 0)
-                                if (c == '/') {
-                                    ReadChar();
-                                    tag = buf.ToString();
-                                    buf = new StringBuilder(4);
-                                    continue;
-                                }
-                                else
-                                    if (!IsLineBreak((char)c)) {
-                                        buf.Append(ReadChar());
-                                        continue;
-                                    }
-
-                            ReadState = ReadState.Error;
-                            throw new SyntaxException("Newline in constant");
-                        }
-                        else {
-                            if (c >= 0) {
-                                char ch = (char)c;
-                                if (IsRegexOption(ch)) {
-                                    buf.Append(ReadChar());
-                                    continue;
-                                }
-                            }
-
-                            LexicalToken t = new LexicalToken(LexicalTokenType.RegularExpression);
-                            t.Value = (string)tag;
-                            t.Tag = buf.ToString();
-                            t.IndentLevel = indent;
-                            Current = t;
-                            return true;
-                        }
-                }
+                _state = State.Open;
             }
 
-            ReadState = ReadState.EndOfFile;
+            if (_state == State.Closed)
+                throw new ObjectDisposedException("LexicalProcessor");
+
+            while (_state != State.EndOfFile)
+            {
+                int c = sourceBuffer.Peek();
+                if (c < 0)
+                {
+                    _state = State.EndOfFile;
+                    break;
+                }
+
+                LexicalToken result = null;
+                char ch = (char)c;
+                try
+                {
+                    switch (_state)
+                    {
+                        case State.LineBreak:
+                            result = ProcessLineBreak(ch); break;
+                        case State.Whitespace: 
+                            result = ProcessWhitespace(ch); break;
+                        case State.Comment: 
+                            result = ProcessComment(ch); break;
+                        case State.Token: 
+                            result = ProcessToken(ch); break;
+                        case State.Directive: 
+                            result = ProcessDirective(ch); break;
+                        case State.RegularExpression: 
+                            result = ProcessRegEx(ch); break;
+                        default:
+                            result = ProcessOpen(ch); break;
+                    }
+                }
+                catch
+                {
+                    _state = State.Error;
+                    throw;
+                }
+
+                if (result != null) {
+                    Current = result;
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -204,12 +97,13 @@ namespace Allegro
         /// </summary>
         public virtual void Close()
         {
-            ReadState = ReadState.Closed;
+            _state = State.Closed;
             Dispose(true);
         }
         #endregion
 
         #region "Protected Methods"
+
         /// <summary>
         /// Determines if the character is a valid whitespace.
         /// </summary>
@@ -255,11 +149,181 @@ namespace Allegro
         }
         #endregion
 
+        #region "Private Methods"
+        private LexicalToken ProcessOpen(char ch)
+        {
+            if (ch == '#')
+            {
+                _state = State.Comment;
+                ReadChar();
+                return null;
+            }
+
+            if (ch == '.')
+            {
+                if (lastToken.Type != LexicalTokenType.LineBreak)
+                    throw new SyntaxException("Preprocessor directives must appear as " +
+                                              "the first non-whitespace character on a line");
+
+                _state = State.Directive;
+                return null;
+            }
+
+            if (ch == '$')
+            {
+                ReadChar();
+
+                int ahead = sourceBuffer.Peek();
+                if (ahead != '/')
+                    throw new SyntaxException("Regular expression expected");
+                ReadChar();
+
+                _processState = null;
+                _state = State.RegularExpression;
+                return null;
+            }
+
+            if (IsLineBreak(ch))
+            {
+                _state = State.LineBreak;
+                return null;
+            }
+
+            if (IsWhitespace(ch))
+            {
+                if (lastToken.Type == LexicalTokenType.LineBreak)
+                    _state = State.Whitespace; // Calculate indent
+                else
+                    ReadChar(); // Consume additional whitespace on Open
+
+                return null;
+            }
+
+            _state = State.Token;
+            return null;
+        }
+
+        private LexicalToken ProcessLineBreak(char ch)
+        {
+            // This state only gets called whenever a line break is detected by other states
+            ReadChar();
+            int ahead = sourceBuffer.Peek();
+            if ((ch == '\u000d') && (ahead == '\u000a'))
+                ReadChar(); // Consume additional line break character
+
+            Line++;
+            Column = 1;
+            return new LexicalToken(LexicalTokenType.LineBreak);
+        }
+
+        private LexicalToken ProcessWhitespace(char ch)
+        {
+            if ((ch == '\u0009') || (ch == '\u000b') || (ch == '\u000c'))
+            {
+                ReadChar();
+                _indentLevel++;
+                return null;
+            }
+
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.SpaceSeparator)
+            {
+                _textBuffer.Append(ReadChar());
+                return null;
+            }
+
+            if ((_textBuffer.Length % 4) != 0)
+                throw new SyntaxException("Whitespaces except tabs must be a multiple of 4");
+
+            _indentLevel += (_textBuffer.Length / 4);
+            ConsumeBuffer();
+            _state = State.Open;
+            return null;
+        }
+
+        private LexicalToken ProcessComment(char ch)
+        {
+            // Calling this state will eat up all remaining characters on this line
+            if (!IsLineBreak(ch)) {
+                _textBuffer.Append(ReadChar());
+                return null;
+            }
+
+            return new LexicalToken(LexicalTokenType.Comment, ConsumeBuffer());
+        }
+
+        private LexicalToken ProcessToken(char ch)
+        {
+            // TODO: Split between operators, keywords, and identifiers
+            throw new NotImplementedException();
+        }
+
+        private LexicalToken ProcessDirective(char ch)
+        {
+            // TODO: Preprocessor directive
+            throw new NotImplementedException();
+        }
+
+        private LexicalToken ProcessRegEx(char ch)
+        {
+            if (_processState == null)
+            {
+                if (ch == '/')
+                {
+                    ReadChar();
+                    _processState = ConsumeBuffer();
+                    return null;
+                }
+                else
+                    if (!IsLineBreak(ch))
+                    {
+                        _textBuffer.Append(ReadChar());
+                        return null;
+                    }
+
+                throw new SyntaxException("Newline in constant");
+            }
+            else
+            {
+                if (IsRegexOption(ch))
+                {
+                    _textBuffer.Append(ReadChar());
+                    return null;
+                }
+
+                LexicalToken t = new LexicalToken(LexicalTokenType.RegularExpression);
+                t.Value = (string)_processState;
+                t.Tag = ConsumeBuffer();
+                t.IndentLevel = _indentLevel;
+                return t;
+            }
+        }
+
+        private string ConsumeBuffer()
+        {
+            string s = _textBuffer.ToString();
+            _textBuffer = new StringBuilder(16);
+            return s;
+        }
+        #endregion
+
         #region "Properties"
         /// <summary>
         /// Gets the current state of the <c>LexicalProcessor</c>.
         /// </summary>
-        public virtual ReadState ReadState { get; protected set; }
+        public virtual ReadState ReadState
+        {
+            get
+            {
+                switch (_state)
+                {
+                    case State.Initial: return ReadState.Initial;
+                    case State.Error: return ReadState.Error;
+                    case State.EndOfFile: return ReadState.EndOfFile;
+                    case State.Closed: return ReadState.Closed;
+                    default: return ReadState.Interactive;
+                }
+            }
+        }
 
         /// <summary>
         /// Gets the latest token read from the source.
@@ -282,7 +346,7 @@ namespace Allegro
         /// <summary>
         /// Gets the current column number.
         /// </summary>
-        public int Column { get; protected set; }
+        public virtual int Column { get; protected set; }
         #endregion
 
         #region "Fields"
@@ -297,6 +361,14 @@ namespace Allegro
         protected LexicalToken lastToken;
 
         private LexicalToken _current;
+
+        private State _state;
+
+        private int _indentLevel;
+
+        private StringBuilder _textBuffer;
+
+        private object _processState;
         #endregion
 
         #region "Static Fields"
@@ -306,8 +378,11 @@ namespace Allegro
         #region "Enums"
         private enum State
         {
-            Closed = -1,
-            Open = 0,
+            Initial = 0,
+            Open,
+            Closed,
+            Error,
+            EndOfFile,
             LineBreak,
             Comment,
             Whitespace,
