@@ -200,6 +200,7 @@ namespace Allegro
             }
 
             _state = State.Token;
+            _tokenSubState = TokenState.Open;
             return null;
         }
 
@@ -254,13 +255,33 @@ namespace Allegro
         private LexicalToken ProcessToken(char ch)
         {
             // TODO: Split between operators, keywords, and identifiers
+            switch (_tokenSubState)
+            {
+                default: // TokenState.Open
+                    break;
+                case TokenState.Identifier:
+                    break;
+                case TokenState.Keyword:
+                    break;
+                case TokenState.IntegerLiteral:
+                    break;
+                case TokenState.RealLiteral:
+                    break;
+                case TokenState.StringLiteral:
+                    break;
+                case TokenState.Operator:
+                    break;
+            }
             throw new NotImplementedException();
         }
 
         private LexicalToken ProcessDirective(char ch)
         {
-            // TODO: Preprocessor directive
-            throw new NotImplementedException();
+            // TODO: Implement preprocessor directive instead of eat up the whole line
+            while (!IsLineBreak(ch))
+                ReadChar();
+            _state = State.Open;
+            return null;
         }
 
         private LexicalToken ProcessRegEx(char ch)
@@ -369,6 +390,8 @@ namespace Allegro
         private StringBuilder _textBuffer;
 
         private object _processState;
+
+        private TokenState _tokenSubState;
         #endregion
 
         #region "Static Fields"
@@ -389,6 +412,17 @@ namespace Allegro
             Token,
             Directive,
             RegularExpression,
+        }
+
+        private enum TokenState
+        {
+            Open,
+            Identifier,
+            Keyword,
+            IntegerLiteral,
+            RealLiteral,
+            StringLiteral,
+            Operator,
         }
         #endregion
 
