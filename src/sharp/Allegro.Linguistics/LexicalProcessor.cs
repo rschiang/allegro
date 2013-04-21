@@ -258,6 +258,12 @@ namespace Allegro
             switch (_tokenSubState)
             {
                 default: // TokenState.Open
+                    // Identifier: (letter/_/@(esc)) + [letter/dec/conn/combining/formatting]*
+                    // Keyword: normal & contextual
+                    // Int: [+/-]dec+ | 0xhex+
+                    // Real: [+/-]dec*[.dec+]
+                    // String: "" ''
+                    // Operators
                     break;
                 case TokenState.Identifier:
                     break;
