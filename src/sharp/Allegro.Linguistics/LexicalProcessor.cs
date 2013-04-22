@@ -129,6 +129,17 @@ namespace Allegro
         }
 
         /// <summary>
+        /// Determines if the character is a valid digit.
+        /// </summary>
+        /// <param name="c">Character to check.</param>
+        /// <returns><c>true</c> if the character is one of the allowed digit character, 
+        /// otherwise, <c>false</c>.</returns>
+        protected virtual bool IsDigit(char c)
+        {
+            return (('0' <= c) && (c <= '9'));
+        }
+
+        /// <summary>
         /// Determines if the character is a valid regular expression options flag.
         /// </summary>
         /// <param name="c">Character to check.</param>
@@ -258,22 +269,53 @@ namespace Allegro
             switch (_tokenSubState)
             {
                 default: // TokenState.Open
-                    // Identifier: (letter/_/@(esc)) + [letter/dec/conn/combining/formatting]*
-                    // Keyword: normal & contextual
-                    // Int: [+/-]dec+ | 0xhex+
-                    // Real: [+/-]dec*[.dec+]
-                    // String: "" ''
-                    // Operators
-                    break;
+                    if (ch == '"') {
+                        _tokenSubState = TokenState.StringLiteralVerbatim;
+                        return null;
+                    }
+
+                    if (ch == '\'') {
+                        _tokenSubState = TokenState.StringLiteral;
+                        return null;
+                    }
+
+                    if (IsDigit(ch)) { // TODO: Cover +/- and split int-dec/int-hex/real
+                        _tokenSubState = TokenState.NumberLiteral;
+                        return null;
+                    }
+
+                    // if (operators) {
+                    // }
+
+                    if (ch == '@') {
+                        _tokenSubState = TokenState.IdentifierVerbatim;
+                        return null;
+                    }
+
+                    // if (keyword) {
+                    // }
+
+                    // if (ch != '_' && !IsLetter(ch))
+                    //     throw new SyntaxException(String.Format("Unexpected character {0}.", ch));
+
+                    _tokenSubState = TokenState.Identifier;
+                    return null;
+
                 case TokenState.Identifier:
+                    // Identifier: (letter/_/@(esc)) + [letter/dec/conn/combining/formatting]*
+                    break;
+                case TokenState.IdentifierVerbatim:
                     break;
                 case TokenState.Keyword:
+                    // Keyword: normal & contextual
                     break;
-                case TokenState.IntegerLiteral:
-                    break;
-                case TokenState.RealLiteral:
+                case TokenState.NumberLiteral:
+                    // Int: [+/-]dec+ | 0xhex+
+                    // Real: [+/-]dec*[.dec+]
                     break;
                 case TokenState.StringLiteral:
+                    break;
+                case TokenState.StringLiteralVerbatim:
                     break;
                 case TokenState.Operator:
                     break;
@@ -292,27 +334,24 @@ namespace Allegro
 
         private LexicalToken ProcessRegEx(char ch)
         {
-            if (_processState == null)
-            {
-                if (ch == '/')
-                {
+            if (_processState == null) {
+
+                if (ch == '/') {
                     ReadChar();
                     _processState = ConsumeBuffer();
                     return null;
                 }
                 else
-                    if (!IsLineBreak(ch))
-                    {
+                    if (!IsLineBreak(ch)) {
                         _textBuffer.Append(ReadChar());
                         return null;
                     }
 
                 throw new SyntaxException("Newline in constant");
             }
-            else
-            {
-                if (IsRegexOption(ch))
-                {
+            else {
+
+                if (IsRegexOption(ch)) {
                     _textBuffer.Append(ReadChar());
                     return null;
                 }
@@ -424,10 +463,11 @@ namespace Allegro
         {
             Open,
             Identifier,
+            IdentifierVerbatim,
             Keyword,
-            IntegerLiteral,
-            RealLiteral,
+            NumberLiteral,
             StringLiteral,
+            StringLiteralVerbatim,
             Operator,
         }
         #endregion
