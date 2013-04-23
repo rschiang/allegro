@@ -140,11 +140,44 @@ namespace Allegro
         }
 
         /// <summary>
+        /// Determines if the character is a valid letter character.
+        /// </summary>
+        /// <param name="c">Character to check.</param>
+        /// <returns><c>true</c> if the character is one of the allowed Unicode letter character,
+        /// otherwise, <c>false</c>.</returns>
+        protected virtual bool IsLetter(char c)
+        {
+            var cat = CharUnicodeInfo.GetUnicodeCategory(c);
+            return (cat == UnicodeCategory.UppercaseLetter) || 
+                   (cat == UnicodeCategory.LowercaseLetter) || 
+                   (cat == UnicodeCategory.TitlecaseLetter) || 
+                   (cat == UnicodeCategory.ModifierLetter) || 
+                   (cat == UnicodeCategory.OtherLetter) || 
+                   (cat == UnicodeCategory.LetterNumber);
+        }
+
+        /// <summary>
+        /// Determines if the character is a valid identifier part character other than letters.
+        /// </summary>
+        /// <param name="c">Character to check.</param>
+        /// <returns><c>true</c> if the character is one of the allowed identifier part character
+        /// excluding letters, otherwise, <c>false</c>.</returns>
+        protected virtual bool IsIdentifierMark(char c)
+        {
+            var cat = CharUnicodeInfo.GetUnicodeCategory(c);
+            return (cat == UnicodeCategory.DecimalDigitNumber) ||   // Decimal digits
+                   (cat == UnicodeCategory.ConnectorPunctuation) || // Connecting chars
+                   (cat == UnicodeCategory.NonSpacingMark) ||       // Combining chars
+                   (cat == UnicodeCategory.SpacingCombiningMark) ||
+                   (cat == UnicodeCategory.Format);                 // Format chars
+        }
+
+        /// <summary>
         /// Determines if the character is a valid regular expression options flag.
         /// </summary>
         /// <param name="c">Character to check.</param>
-        /// <returns><c>true</c> if the character is one of the allowed regular expression 
-        /// options flag, otherwise, <c>false</c>.</returns>
+        /// <returns><c>true</c> if the character is in the allowed regular expression 
+        /// options flag format, otherwise, <c>false</c>.</returns>
         protected virtual bool IsRegexOption(char c)
         {
             return (('a' <= c) && (c <= 'z')) || (('A' <= c) && (c <= 'Z'));
@@ -279,7 +312,7 @@ namespace Allegro
                         return null;
                     }
 
-                    if (IsDigit(ch)) { // TODO: Cover +/- and split int-dec/int-hex/real
+                    if (IsDigit(ch)) { // number sign should be handled as an operator
                         _tokenSubState = TokenState.NumberLiteral;
                         return null;
                     }
@@ -287,40 +320,43 @@ namespace Allegro
                     // if (operators) {
                     // }
 
-                    if (ch == '@') {
-                        _tokenSubState = TokenState.IdentifierVerbatim;
+                    if (ch == '@') { // Use @ as an operator precedence override
+                        _tokenSubState = TokenState.Identifier;
+                        ReadChar();
                         return null;
                     }
 
                     // if (keyword) {
                     // }
 
-                    // if (ch != '_' && !IsLetter(ch))
-                    //     throw new SyntaxException(String.Format("Unexpected character {0}.", ch));
+                    if (ch != '_' && !IsLetter(ch))
+                        throw new SyntaxException(String.Format("Unexpected character {0}.", ch));
 
                     _tokenSubState = TokenState.Identifier;
                     return null;
 
                 case TokenState.Identifier:
                     // Identifier: (letter/_/@(esc)) + [letter/dec/conn/combining/formatting]*
-                    break;
-                case TokenState.IdentifierVerbatim:
-                    break;
+                    if (IsLetter(ch) || IsIdentifierMark(ch)) {
+                        _textBuffer.Append(ReadChar());
+                        return null;
+                    }
+                    return new LexicalToken(LexicalTokenType.Identifier, ConsumeBuffer());
+
                 case TokenState.Keyword:
                     // Keyword: normal & contextual
-                    break;
+                    throw new NotImplementedException();
                 case TokenState.NumberLiteral:
                     // Int: [+/-]dec+ | 0xhex+
                     // Real: [+/-]dec*[.dec+]
-                    break;
+                    throw new NotImplementedException();
                 case TokenState.StringLiteral:
-                    break;
+                    throw new NotImplementedException();
                 case TokenState.StringLiteralVerbatim:
-                    break;
+                    throw new NotImplementedException();
                 case TokenState.Operator:
-                    break;
+                    throw new NotImplementedException();
             }
-            throw new NotImplementedException();
         }
 
         private LexicalToken ProcessDirective(char ch)
@@ -463,7 +499,6 @@ namespace Allegro
         {
             Open,
             Identifier,
-            IdentifierVerbatim,
             Keyword,
             NumberLiteral,
             StringLiteral,
