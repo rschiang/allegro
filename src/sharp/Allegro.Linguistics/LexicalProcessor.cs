@@ -304,6 +304,7 @@ namespace Allegro
                 default: // TokenState.Open
                     if (ch == '"') {
                         _tokenSubState = TokenState.StringLiteralVerbatim;
+                        _processState = false;
                         return null;
                     }
 
@@ -329,14 +330,13 @@ namespace Allegro
                     // if (keyword) {
                     // }
 
-                    if (ch != '_' && !IsLetter(ch))
+                    if ((ch != '_') && !IsLetter(ch))
                         throw new SyntaxException(String.Format("Unexpected character {0}.", ch));
 
                     _tokenSubState = TokenState.Identifier;
                     return null;
 
                 case TokenState.Identifier:
-                    // Identifier: (letter/_/@(esc)) + [letter/dec/conn/combining/formatting]*
                     if (IsLetter(ch) || IsIdentifierMark(ch)) {
                         _textBuffer.Append(ReadChar());
                         return null;
@@ -346,14 +346,34 @@ namespace Allegro
                 case TokenState.Keyword:
                     // Keyword: normal & contextual
                     throw new NotImplementedException();
+
                 case TokenState.NumberLiteral:
                     // Int: [+/-]dec+ | 0xhex+
                     // Real: [+/-]dec*[.dec+]
                     throw new NotImplementedException();
+
                 case TokenState.StringLiteral:
                     throw new NotImplementedException();
+
                 case TokenState.StringLiteralVerbatim:
-                    throw new NotImplementedException();
+                    if (ch != '"') {
+                        _textBuffer.Append(ReadChar());
+                        return null;
+                    }
+
+                    ReadChar(); // Eats the quote
+                    if (!((bool)_processState)) {
+                        _processState = true;
+                        return null;
+                    }
+                    else
+                        if (sourceBuffer.Peek() == '"') {
+                            _textBuffer.Append(ReadChar()); // Escape quote
+                            return null;
+                        }
+
+                    return new LexicalToken(LexicalTokenType.StringLiteral, ConsumeBuffer());
+
                 case TokenState.Operator:
                     throw new NotImplementedException();
             }
