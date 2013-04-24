@@ -310,6 +310,7 @@ namespace Allegro
 
                     if (ch == '\'') {
                         _tokenSubState = TokenState.StringLiteral;
+                        _processState = false;
                         return null;
                     }
 
@@ -353,7 +354,44 @@ namespace Allegro
                     throw new NotImplementedException();
 
                 case TokenState.StringLiteral:
-                    throw new NotImplementedException();
+                    if (ch == '\'') {
+                        ReadChar(); // Eats the quote
+                        if ((bool)_processState) {
+                            return new LexicalToken(LexicalTokenType.StringLiteral, ConsumeBuffer());
+                        }
+                        _processState = true;
+                        return null;
+                    }
+
+                    if (ch == '\\') { // Start of escape sequence
+                        ReadChar();
+                        switch (sourceBuffer.Peek())
+                        {
+                            case '\'': _textBuffer.Append('\''); break;
+                            case '\"': _textBuffer.Append('\"'); break;
+                            case '\\': _textBuffer.Append('\\'); break;
+                            case '0': _textBuffer.Append('\0'); break;
+                            case 'a': _textBuffer.Append('\a'); break;
+                            case 'b': _textBuffer.Append('\b'); break;
+                            case 'f': _textBuffer.Append('\f'); break;
+                            case 'n': _textBuffer.Append('\n'); break;
+                            case 'r': _textBuffer.Append('\r'); break;
+                            case 't': _textBuffer.Append('\t'); break;
+                            case 'v': _textBuffer.Append('\n'); break;
+                            default:
+                                throw new SyntaxException("Unrecognized escape sequence");
+                        }
+                        ReadChar(); // Eats the escape char
+                        return null;
+                    }
+
+                    if (IsLineBreak(ch)) {
+                        // Though technically allowed...
+                        throw new SyntaxException("Newline in constant");
+                    }
+
+                    _textBuffer.Append(ReadChar());
+                    return null;
 
                 case TokenState.StringLiteralVerbatim:
                     if (ch != '"') {
