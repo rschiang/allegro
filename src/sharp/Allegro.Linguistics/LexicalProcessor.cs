@@ -196,15 +196,13 @@ namespace Allegro
         #region "Private Methods"
         private LexicalToken ProcessOpen(char ch)
         {
-            if (ch == '#')
-            {
+            if (ch == '#') {
                 _state = State.Comment;
                 ReadChar();
                 return null;
             }
 
-            if (ch == '.')
-            {
+            if (ch == '.') {
                 if (lastToken.Type != LexicalTokenType.LineBreak)
                     throw new SyntaxException("Preprocessor directives must appear as " +
                                               "the first non-whitespace character on a line");
@@ -213,8 +211,7 @@ namespace Allegro
                 return null;
             }
 
-            if (ch == '$')
-            {
+            if (ch == '$') {
                 ReadChar();
 
                 int ahead = sourceBuffer.Peek();
@@ -227,14 +224,12 @@ namespace Allegro
                 return null;
             }
 
-            if (IsLineBreak(ch))
-            {
+            if (IsLineBreak(ch)) {
                 _state = State.LineBreak;
                 return null;
             }
 
-            if (IsWhitespace(ch))
-            {
+            if (IsWhitespace(ch)) {
                 if (lastToken.Type == LexicalTokenType.LineBreak)
                     _state = State.Whitespace; // Calculate indent
                 else
@@ -263,15 +258,13 @@ namespace Allegro
 
         private LexicalToken ProcessWhitespace(char ch)
         {
-            if ((ch == '\u0009') || (ch == '\u000b') || (ch == '\u000c'))
-            {
+            if ((ch == '\u0009') || (ch == '\u000b') || (ch == '\u000c')) {
                 ReadChar();
                 _indentLevel++;
                 return null;
             }
 
-            if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.SpaceSeparator)
-            {
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.SpaceSeparator) {
                 _textBuffer.Append(ReadChar());
                 return null;
             }
@@ -314,8 +307,9 @@ namespace Allegro
                         return null;
                     }
 
-                    if (IsDigit(ch)) { // number sign should be handled as an operator
+                    if (IsDigit(ch) || ch == '.') { // number sign should be handled as an operator
                         _tokenSubState = TokenState.NumberLiteral;
+                        _processState = 0;
                         return null;
                     }
 
@@ -342,6 +336,7 @@ namespace Allegro
                         _textBuffer.Append(ReadChar());
                         return null;
                     }
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Identifier, ConsumeBuffer());
 
                 case TokenState.Keyword:
@@ -349,14 +344,72 @@ namespace Allegro
                     throw new NotImplementedException();
 
                 case TokenState.NumberLiteral:
-                    // Int: [+/-]dec+ | 0xhex+
-                    // Real: [+/-]dec*[.dec+]
-                    throw new NotImplementedException();
+                    // Process states: 0 - init; -1 - zero; 1 - dec; 10 - real; 16 - hex
+                    // Int: \d+ | 0x[\da-fA-F]+
+                    // Real: \d*\.\d+
+                    if ((int)_processState == 0) {
+                        _processState = (ch == '0') ? -1 : 1;
+                        if (ch == '.')
+                        {
+                            ReadChar(); // Eats the period
+
+                            int ahead = sourceBuffer.Peek();
+                            if ((ahead > 0) && (IsDigit((char)ahead)))
+                            {
+                                _processState = 10;
+                                if (_textBuffer.Length <= 0)    // Literal in \.\d+ form
+                                    _textBuffer.Append('0');    // Add the missing 0
+                                _textBuffer.Append('.');
+                                return null;
+                            }
+
+                            // Or translate into dot operator
+                            _state = State.Open;
+                            return new LexicalToken(LexicalTokenType.Operator, ".");
+                        }
+                    }
+
+                    if (IsDigit(ch)) {                  // dec numbers
+                        _textBuffer.Append(ReadChar());
+                        return null;
+                    }
+
+                    if ((int)_processState == 16) {     // hex numbers
+                        char alt = char.ToLowerInvariant(ch);
+                        if (('a' <= alt) && (alt <= 'f')) {
+                            _textBuffer.Append(ReadChar());
+                            return null;
+                        }
+                    }
+
+                    if (ch == 'x' && ((int)_processState == -1)) {  // 0 to hex
+                        ReadChar(); // Eats the hex indicator
+                        _processState = 16;
+                        return null;
+                    }
+
+                    if (ch == '.' && ((int)_processState == 1)) { // int to real
+                        _textBuffer.Append(ReadChar());
+                        _processState = 10;
+                        return null;
+                    }
+
+                    // 
+                    _state = State.Open;
+                    string digits = ConsumeBuffer();
+                    if ((int)_processState == 16) {
+                        // TODO: Large hex representation
+                        digits = Convert.ToInt64(digits, 16).ToString();
+                    }
+                    return new LexicalToken(((int)_processState == 10) ? LexicalTokenType.RealLiteral :
+                                                                         LexicalTokenType.IntegerLiteral,
+                                                                         digits);
 
                 case TokenState.StringLiteral:
                     if (ch == '\'') {
                         ReadChar(); // Eats the quote
                         if ((bool)_processState) {
+                            _state = State.Open;
                             return new LexicalToken(LexicalTokenType.StringLiteral, ConsumeBuffer());
                         }
                         _processState = true;
@@ -410,6 +463,7 @@ namespace Allegro
                             return null;
                         }
 
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.StringLiteral, ConsumeBuffer());
 
                 case TokenState.Operator:
