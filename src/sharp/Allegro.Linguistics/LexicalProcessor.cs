@@ -309,7 +309,7 @@ namespace Allegro
 
                     if (IsDigit(ch) || ch == '.') { // number sign should be handled as an operator
                         _tokenSubState = TokenState.NumberLiteral;
-                        _processState = 0;
+                        _processState = -1;
                         return null;
                     }
 
@@ -344,66 +344,7 @@ namespace Allegro
                     throw new NotImplementedException();
 
                 case TokenState.NumberLiteral:
-                    // Process states: 0 - init; -1 - zero; 1 - dec; 10 - real; 16 - hex
-                    // Int: \d+ | 0x[\da-fA-F]+
-                    // Real: \d*\.\d+
-                    if ((int)_processState == 0) {
-                        _processState = (ch == '0') ? -1 : 1;
-                        if (ch == '.')
-                        {
-                            ReadChar(); // Eats the period
-
-                            int ahead = sourceBuffer.Peek();
-                            if ((ahead > 0) && (IsDigit((char)ahead)))
-                            {
-                                _processState = 10;
-                                if (_textBuffer.Length <= 0)    // Literal in \.\d+ form
-                                    _textBuffer.Append('0');    // Add the missing 0
-                                _textBuffer.Append('.');
-                                return null;
-                            }
-
-                            // Or translate into dot operator
-                            _state = State.Open;
-                            return new LexicalToken(LexicalTokenType.Operator, ".");
-                        }
-                    }
-
-                    if (IsDigit(ch)) {                  // dec numbers
-                        _textBuffer.Append(ReadChar());
-                        return null;
-                    }
-
-                    if ((int)_processState == 16) {     // hex numbers
-                        char alt = char.ToLowerInvariant(ch);
-                        if (('a' <= alt) && (alt <= 'f')) {
-                            _textBuffer.Append(ReadChar());
-                            return null;
-                        }
-                    }
-
-                    if (ch == 'x' && ((int)_processState == -1)) {  // 0 to hex
-                        ReadChar(); // Eats the hex indicator
-                        _processState = 16;
-                        return null;
-                    }
-
-                    if (ch == '.' && ((int)_processState == 1)) { // int to real
-                        _textBuffer.Append(ReadChar());
-                        _processState = 10;
-                        return null;
-                    }
-
-                    // 
-                    _state = State.Open;
-                    string digits = ConsumeBuffer();
-                    if ((int)_processState == 16) {
-                        // TODO: Large hex representation
-                        digits = Convert.ToInt64(digits, 16).ToString();
-                    }
-                    return new LexicalToken(((int)_processState == 10) ? LexicalTokenType.RealLiteral :
-                                                                         LexicalTokenType.IntegerLiteral,
-                                                                         digits);
+                    return ProcessNumberLiteral(ch);
 
                 case TokenState.StringLiteral:
                     if (ch == '\'') {
@@ -469,6 +410,76 @@ namespace Allegro
                 case TokenState.Operator:
                     throw new NotImplementedException();
             }
+        }
+
+        private LexicalToken ProcessNumberLiteral(char ch)
+        {
+            // Process states: 0 - dec; 10 - real; 16 - hex
+            int nanostate = (int)_processState;
+            // Int: \d+ | 0x[\da-fA-F]+
+            // Real: \d*\.\d+
+            if (nanostate == -1) {
+                if (ch == '0') {
+                    ReadChar();
+                    if (sourceBuffer.Peek() == 'x') {
+                        nanostate = 16;
+                        return null;
+                    }
+                    _textBuffer.Append('0');    // Compensate the zero
+                }
+                if (ch == '.') {
+                    _textBuffer.Append('0');    // Abbreviation form
+                }
+                nanostate = 0;
+            }
+
+            if (IsDigit(ch)) {
+                _textBuffer.Append(ReadChar());
+                return null;
+            }
+
+            if (nanostate == 16) {
+                char alt = char.ToLowerInvariant(ch);
+                if (('a' <= alt) && (alt <= 'f')) {
+                    _textBuffer.Append(ReadChar());
+                    return null;
+                }
+            }
+
+            if ((ch == '.') && (nanostate == 0)) {  // Only int is eligible to convert to real
+                ReadChar(); // Eats the period
+
+                int ahead = sourceBuffer.Peek();
+                if ((ahead > 0) && (IsDigit((char)ahead)))
+                {
+                    _processState = 10;
+                    _textBuffer.Append('.');
+                    return null;
+                }
+
+                // If no digits following, then we guessed wrong and need to emit dot operator instead
+                _state = State.Open;
+                return new LexicalToken(LexicalTokenType.Operator, ".");
+            }
+
+            _state = State.Open;
+            string digits = ConsumeBuffer();
+            if ((int)_processState == 16) { // Perform additional conversion on hex
+                if (digits.Length <= 0)
+                    throw new SyntaxException("Abruptly ended hexadecimal integer constant");
+                else {
+                    // TODO: Large hex representation
+                    try {
+                        digits = Convert.ToInt64(digits, 16).ToString();
+                    }
+                    catch (OverflowException ex) {
+                        throw new SyntaxException("Integral constant is too large on Allegro#", ex);
+                    }
+                }
+            }
+            return new LexicalToken(((int)_processState == 10) ? LexicalTokenType.RealLiteral :
+                                                                 LexicalTokenType.IntegerLiteral,
+                                                                 digits);
         }
 
         private LexicalToken ProcessDirective(char ch)
