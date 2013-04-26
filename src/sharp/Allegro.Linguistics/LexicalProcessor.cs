@@ -86,6 +86,7 @@ namespace Allegro
 
                 if (result != null) {
                     Current = result;
+                    result.IndentLevel = _indentLevel;
                     return true;
                 }
             }
@@ -253,6 +254,7 @@ namespace Allegro
 
             Line++;
             Column = 1;
+            _indentLevel = 0;
             return new LexicalToken(LexicalTokenType.LineBreak);
         }
 
@@ -518,7 +520,6 @@ namespace Allegro
                 LexicalToken t = new LexicalToken(LexicalTokenType.RegularExpression);
                 t.Value = (string)_processState;
                 t.Tag = ConsumeBuffer();
-                t.IndentLevel = _indentLevel;
                 return t;
             }
         }
