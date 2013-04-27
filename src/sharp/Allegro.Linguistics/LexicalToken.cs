@@ -71,15 +71,6 @@ namespace Allegro
         /// Gets or sets additional data for this token.
         /// </summary>
         public virtual object Tag { get; set; }
-
-        /// <summary>
-        /// Gets the indent level of this token.
-        /// </summary>
-        /// <remarks>A valid value can only be expected when the instance represents a token.
-        /// That is, on <c>LexicalTokenType.Comment</c>, <c>LexicalTokenType.Directive</c>, 
-        /// <c>LexicalTokenType.LineBreak</c>, <c>LexicalTokenType.Whitespace</c>, 
-        /// the correctness of this value is implement-dependent.</remarks>
-        public virtual int IndentLevel { get; set; }
         #endregion
     }
 }

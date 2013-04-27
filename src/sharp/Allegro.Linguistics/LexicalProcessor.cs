@@ -35,7 +35,8 @@ namespace Allegro
         {
             if (_state == State.Initial) {
                 _textBuffer = new StringBuilder(16);
-                _indentLevel = 0;
+                _indentLevels = new Stack<int>(8);
+                _newline = true;
                 _current = new LexicalToken();
                 lastToken = new LexicalToken();
                 Line = 1;
@@ -50,8 +51,7 @@ namespace Allegro
             while (_state != State.EndOfFile)
             {
                 int c = sourceBuffer.Peek();
-                if (c < 0)
-                {
+                if (c < 0) {
                     _state = State.EndOfFile;
                     break;
                 }
@@ -85,8 +85,7 @@ namespace Allegro
                 }
 
                 if (result != null) {
-                    Current = result;
-                    result.IndentLevel = _indentLevel;
+                    _current = result;
                     return true;
                 }
             }
@@ -197,18 +196,33 @@ namespace Allegro
         #region "Private Methods"
         private LexicalToken ProcessOpen(char ch)
         {
-            if (ch == '#') {
-                _state = State.Comment;
-                ReadChar();
-                return null;
-            }
-
             if (ch == '.') {
-                if (lastToken.Type != LexicalTokenType.LineBreak)
+                if (!_newline)
                     throw new SyntaxException("Preprocessor directives must appear as " +
                                               "the first non-whitespace character on a line");
 
                 _state = State.Directive;
+                return null;
+            }
+
+            if (IsLineBreak(ch)) {
+                _state = State.LineBreak;
+                return null;
+            }
+
+            if (IsWhitespace(ch)) {
+                if (_newline)
+                    throw new SyntaxException("Unexpected indent");
+                else
+                    ReadChar(); // Consume additional whitespaces
+                return null;
+            }
+
+            _newline = false;   // The following are all not whitespaces
+
+            if (ch == '#') {
+                _state = State.Comment;
+                ReadChar();
                 return null;
             }
 
@@ -222,20 +236,6 @@ namespace Allegro
 
                 _processState = null;
                 _state = State.RegularExpression;
-                return null;
-            }
-
-            if (IsLineBreak(ch)) {
-                _state = State.LineBreak;
-                return null;
-            }
-
-            if (IsWhitespace(ch)) {
-                if (lastToken.Type == LexicalTokenType.LineBreak)
-                    _state = State.Whitespace; // Calculate indent
-                else
-                    ReadChar(); // Consume additional whitespace on Open
-
                 return null;
             }
 
@@ -254,28 +254,39 @@ namespace Allegro
 
             Line++;
             Column = 1;
-            _indentLevel = 0;
-            return new LexicalToken(LexicalTokenType.LineBreak);
+            _newline = true;
+            _processState = 0;
+            _state = State.Whitespace; // Always expect whitespace after line breaks
+            return null;
         }
 
         private LexicalToken ProcessWhitespace(char ch)
         {
+            int cur = (int)_processState;
+
             if ((ch == '\u0009') || (ch == '\u000b') || (ch == '\u000c')) {
                 ReadChar();
-                _indentLevel++;
+                _processState = cur + 4;
                 return null;
             }
 
             if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.SpaceSeparator) {
-                _textBuffer.Append(ReadChar());
+                _processState = cur + 1;
                 return null;
             }
 
-            if ((_textBuffer.Length % 4) != 0)
-                throw new SyntaxException("Whitespaces except tabs must be a multiple of 4");
+            int last = _indentLevels.Count > 0 ? _indentLevels.Peek() : 0;
 
-            _indentLevel += (_textBuffer.Length / 4);
-            ConsumeBuffer();
+            if (last > cur) {
+                _indentLevels.Pop();
+                return new LexicalToken(LexicalTokenType.Dedent);
+            }
+            else if (last < cur) {
+                _indentLevels.Push(cur);
+                return new LexicalToken(LexicalTokenType.Indent);
+            }
+
+            // Same indent. continue;
             _state = State.Open;
             return null;
         }
@@ -595,7 +606,9 @@ namespace Allegro
 
         private State _state;
 
-        private int _indentLevel;
+        private Stack<int> _indentLevels;
+
+        private bool _newline;
 
         private StringBuilder _textBuffer;
 
@@ -616,8 +629,8 @@ namespace Allegro
             Closed,
             Error,
             EndOfFile,
-            LineBreak,
             Comment,
+            LineBreak,
             Whitespace,
             Token,
             Directive,

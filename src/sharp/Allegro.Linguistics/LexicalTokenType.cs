@@ -13,14 +13,14 @@ namespace Allegro
         None = 0,
 
         /// <summary>
-        /// Line break.
+        /// Increase of indent.
         /// </summary>
-        LineBreak,
+        Indent,
 
         /// <summary>
-        /// Whitespace.
+        /// Decrease of indent.
         /// </summary>
-        Whitespace,
+        Dedent,
 
         /// <summary>
         /// Code comment.
