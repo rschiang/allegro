@@ -67,6 +67,15 @@ and so on.
 [regex]: http://msdn.microsoft.com/zh-tw/library/system.text.regularexpressions.regex.aspx
 [regex.opt]: http://msdn.microsoft.com/zh-tw/library/system.text.regularexpressions.regexoptions.aspx
 
+### Operators
+
+* Arithmetic operators (`+` `-` `*` `/` `**` `//` `%`)
+* Shifting operators (`<<` `>>`)
+* Bitwise operators ( `&` `|` `^` )
+* Comparison operators (`<` `>` `==` `>=` `<=` `!=` `is` `in`)
+* Boolean operators (`and` `or` `not`)
+
+
 ### Lexical features
 
     <statement> then <statement>
