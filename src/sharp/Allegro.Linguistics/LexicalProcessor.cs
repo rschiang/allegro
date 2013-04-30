@@ -456,6 +456,33 @@ namespace Allegro
                         case '~':
                             ReadChar();
                             return new LexicalToken(LexicalTokenType.Operator, "~"); // Bitwise NOT
+                        case '.':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "."); // Dot operator
+                        case ',':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "~"); // Comma seperator
+                        case '(':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "("); // Left P.
+                        case ')':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, ")"); // Right P.
+                        case '[':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "["); // Left Indexer B.
+                        case ']':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "]"); // Right Indexer B.
+                        case '{':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "~"); // Left Entity B.
+                        case '}':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "~"); // Right Entity B.
+                        case ':':
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, ":"); // Colon
                         default:
                             if (_textBuffer.Length > 0) {
                                 // Pending operator.
