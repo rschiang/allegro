@@ -327,16 +327,19 @@ namespace Allegro
                     }
 
                     if (ch == '@') { // Use @ as an operator precedence override
-                        _tokenSubState = TokenState.Identifier;
                         ReadChar();
+                        int ahead = sourceBuffer.Peek();
+                        if ((ahead < 0) || (ahead != '_' && !IsLetter((char)ahead)))
+                            throw new SyntaxException("Keyword or identifier expected after verbatim specifier '@'");
+                        
+                        _tokenSubState = TokenState.Identifier;
+                        _processState = true; // Verbatim state
                         return null;
                     }
 
-                    // if (keyword) {
-                    // }
-
                     if ((ch == '_') || IsLetter(ch)) {
                         _tokenSubState = TokenState.Identifier;
+                        _processState = false; // Could be keyword
                         return null;
                     }
 
@@ -349,12 +352,13 @@ namespace Allegro
                         _textBuffer.Append(ReadChar());
                         return null;
                     }
+
+                    if (!(bool)_processState) {
+                        // TODO: Match if keyword
+                    }
+
                     _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Identifier, ConsumeBuffer());
-
-                case TokenState.Keyword:
-                    // Keyword: normal & contextual
-                    throw new NotImplementedException();
 
                 case TokenState.NumberLiteral:
                     return ProcessNumberLiteral(ch);
@@ -383,115 +387,7 @@ namespace Allegro
                     return new LexicalToken(LexicalTokenType.StringLiteral, ConsumeBuffer());
 
                 case TokenState.Operator:
-                    switch (ch)
-                    {
-                        case '+':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "+");
-                        case '-':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "-");
-                        case '*':
-                            _textBuffer.Append(ReadChar());
-                            if (_textBuffer.Length > 0)
-                                return new LexicalToken(LexicalTokenType.Operator, "**");
-                            else return null; // If it's a single *, default will handle for us
-                        case '/':
-                            _textBuffer.Append(ReadChar());
-                            if (_textBuffer.Length > 0)
-                                return new LexicalToken(LexicalTokenType.Operator, "//"); // Modulus
-                            else return null; // If it's a single /, default will handle for us
-                        case '<':
-                            ReadChar();
-                            switch (sourceBuffer.Peek())
-                            {
-                                case '<': // Left-shift
-                                    ReadChar();
-                                    return new LexicalToken(LexicalTokenType.Operator, "<<");
-                                case '=': // Lesser than or equal
-                                    ReadChar();
-                                    return new LexicalToken(LexicalTokenType.Operator, "<=");
-                                default: // Lesser than
-                                    return new LexicalToken(LexicalTokenType.Operator, "<");
-                            }
-                        case '>':
-                            ReadChar();
-                            switch (sourceBuffer.Peek())
-                            {
-                                case '>': // Right-shift
-                                    ReadChar();
-                                    return new LexicalToken(LexicalTokenType.Operator, ">>");
-                                case '=': // Greater than or equal
-                                    ReadChar();
-                                    return new LexicalToken(LexicalTokenType.Operator, ">=");
-                                default: // Greater than
-                                    return new LexicalToken(LexicalTokenType.Operator, ">");
-                            }
-                        case '=':
-                            ReadChar();
-                            switch (sourceBuffer.Peek())
-                            {
-                                case '=': // Equal
-                                    ReadChar();
-                                    return new LexicalToken(LexicalTokenType.Operator, "==");
-                                default: // Assign
-                                    return new LexicalToken(LexicalTokenType.Operator, "=");
-                            }
-                        case '!':
-                            ReadChar();
-                            if (sourceBuffer.Peek() != '=') break;
-                            return new LexicalToken(LexicalTokenType.Operator, "!=");
-                        case '%':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "%"); // Format
-                        case '&':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "&"); // Bitwise AND
-                        case '|':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "|"); // Bitwise OR
-                        case '^':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "^"); // Bitwise XOR
-                        case '~':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "~"); // Bitwise NOT
-                        case '.':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "."); // Dot operator
-                        case ',':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "~"); // Comma seperator
-                        case '(':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "("); // Left P.
-                        case ')':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, ")"); // Right P.
-                        case '[':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "["); // Left Indexer B.
-                        case ']':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "]"); // Right Indexer B.
-                        case '{':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "~"); // Left Entity B.
-                        case '}':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "~"); // Right Entity B.
-                        case ':':
-                            ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, ":"); // Colon
-                        default:
-                            if (_textBuffer.Length > 0) {
-                                // Pending operator.
-                                return new LexicalToken(LexicalTokenType.Operator, ConsumeBuffer());
-                            }
-                            else break;
-                    }
-
-                    throw new SyntaxException(String.Format("Unexpected character {0}.", ch));
+                    return ProcessOperator(ch);
             }
         }
 
@@ -606,6 +502,121 @@ namespace Allegro
 
             _textBuffer.Append(ReadChar());
             return null;
+        }
+
+        private LexicalToken ProcessOperator(char ch)
+        {
+            // TODO: The reason why we use individual cases is that we'll need to replace them with enums
+            switch (ch)
+            {
+                case '+':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "+");
+                case '-':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "-");
+                case '*':
+                    _textBuffer.Append(ReadChar());
+                    if (_textBuffer.Length > 0)
+                        return new LexicalToken(LexicalTokenType.Operator, "**");
+                    else return null; // If it's a single *, default will handle for us
+                case '/':
+                    _textBuffer.Append(ReadChar());
+                    if (_textBuffer.Length > 0)
+                        return new LexicalToken(LexicalTokenType.Operator, "//"); // Modulus
+                    else return null; // If it's a single /, default will handle for us
+                case '<':
+                    ReadChar();
+                    switch (sourceBuffer.Peek())
+                    {
+                        case '<': // Left-shift
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "<<");
+                        case '=': // Lesser than or equal
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "<=");
+                        default: // Lesser than
+                            return new LexicalToken(LexicalTokenType.Operator, "<");
+                    }
+                case '>':
+                    ReadChar();
+                    switch (sourceBuffer.Peek())
+                    {
+                        case '>': // Right-shift
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, ">>");
+                        case '=': // Greater than or equal
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, ">=");
+                        default: // Greater than
+                            return new LexicalToken(LexicalTokenType.Operator, ">");
+                    }
+                case '=':
+                    ReadChar();
+                    switch (sourceBuffer.Peek())
+                    {
+                        case '=': // Equal
+                            ReadChar();
+                            return new LexicalToken(LexicalTokenType.Operator, "==");
+                        default: // Assign
+                            return new LexicalToken(LexicalTokenType.Operator, "=");
+                    }
+                case '!':
+                    ReadChar();
+                    if (sourceBuffer.Peek() != '=') break;
+                    return new LexicalToken(LexicalTokenType.Operator, "!=");
+                case '%':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "%"); // Format
+                case '&':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "&"); // Bitwise AND
+                case '|':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "|"); // Bitwise OR
+                case '^':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "^"); // Bitwise XOR
+                case '~':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "~"); // Bitwise NOT
+                case '.':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "."); // Dot operator
+                case ',':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "~"); // Comma seperator
+                case '(':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "("); // Left P.
+                case ')':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, ")"); // Right P.
+                case '[':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "["); // Left Indexer B.
+                case ']':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "]"); // Right Indexer B.
+                case '{':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "~"); // Left Entity B.
+                case '}':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, "~"); // Right Entity B.
+                case ':':
+                    ReadChar();
+                    return new LexicalToken(LexicalTokenType.Operator, ":"); // Colon
+                default:
+                    if (_textBuffer.Length > 0)
+                    {
+                        // Pending operator.
+                        return new LexicalToken(LexicalTokenType.Operator, ConsumeBuffer());
+                    }
+                    else break;
+            }
+
+            throw new SyntaxException(String.Format("Unexpected character {0}.", ch));
         }
 
         private LexicalToken ProcessDirective(char ch)
@@ -749,7 +760,6 @@ namespace Allegro
         {
             Open,
             Identifier,
-            Keyword,
             NumberLiteral,
             StringLiteral,
             StringLiteralVerbatim,
