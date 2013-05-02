@@ -354,7 +354,7 @@ namespace Allegro
                     }
 
                     if (!(bool)_processState) {
-                        // TODO: Match if keyword
+                        // TODO: Match if keyword, contextual, primitive types, or boolean literal
                     }
 
                     _state = State.Open;
@@ -738,6 +738,19 @@ namespace Allegro
 
         #region "Static Fields"
         protected static readonly char[] lineTerminators = {'\u000d', '\u000a', '\u0085', '\u2028', '\u2029'};
+        protected static readonly string[] strictKeywords = {
+                                                                "def", "class", "import", "require", 
+                                                                "if", "elif", "else", 
+                                                                "for", "while", "until", 
+                                                                "try", "catch", "finally", "throw", 
+                                                                "continue", "break", "return", 
+                                                                "then", 
+                                                                "pass", "await", "async", 
+                                                            };
+        protected static readonly string[] contextKeywords = {
+                                                                "from", "in", "get", "set", "as",
+                                                             };
+        protected static readonly string[] primitiveTypes = { "int", "real", "bool", "string" };
         #endregion
 
         #region "Enums"
