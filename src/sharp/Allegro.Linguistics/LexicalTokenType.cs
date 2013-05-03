@@ -53,6 +53,11 @@ namespace Allegro
         RealLiteral,
 
         /// <summary>
+        /// Boolean literal.
+        /// </summary>
+        BooleanLiteral,
+
+        /// <summary>
         /// String literal.
         /// </summary>
         StringLiteral,

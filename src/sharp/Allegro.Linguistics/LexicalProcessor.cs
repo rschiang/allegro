@@ -353,12 +353,39 @@ namespace Allegro
                         return null;
                     }
 
+                    _state = State.Open;
+
+                    string identifier = ConsumeBuffer();
+
                     if (!(bool)_processState) {
-                        // TODO: Match if keyword, contextual, primitive types, or boolean literal
+                        string id_lower = identifier.ToLowerInvariant();
+
+                        // Match strict and contexual keywords
+                        foreach (string keyword in strictKeywords)
+                            if (String.Equals(identifier, id_lower)) {
+                                // TODO: Set strict token type
+                                return new LexicalToken(LexicalTokenType.Keyword, id_lower, true);
+                            }
+
+                        foreach (string keyword in contextKeywords)
+                            if (String.Equals(identifier, id_lower)) {
+                                // TODO: Set it as indeterminate keyword
+                                return new LexicalToken(LexicalTokenType.Keyword, id_lower, false);
+                            }
+
+                        // Match literals
+                        if (String.Equals(id_lower, "true")) 
+                            return new LexicalToken(LexicalTokenType.BooleanLiteral, id_lower, true);
+
+                        if (String.Equals(id_lower, "false"))
+                            return new LexicalToken(LexicalTokenType.BooleanLiteral, id_lower, false);
+
+                        // TODO: Build up a null literal
+                        if (String.Equals(id_lower, "null"))
+                            return new LexicalToken(LexicalTokenType.Keyword, id_lower, null);
                     }
 
-                    _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Identifier, ConsumeBuffer());
+                    return new LexicalToken(LexicalTokenType.Identifier, identifier);
 
                 case TokenState.NumberLiteral:
                     return ProcessNumberLiteral(ch);
