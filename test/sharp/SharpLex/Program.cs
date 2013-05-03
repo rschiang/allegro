@@ -23,11 +23,13 @@ namespace Allegro.Test.SharpLex
                 while (lexer.Read())
                 {
                     LexicalToken token = lexer.Current;
-                    buffer.Text(ConsoleColor.DarkYellow, String.Format("[{0}]", GetEnumName(token.Type)))
-                          .Text(" ")
-                          .Text(ConsoleColor.DarkGray, "\'")
-                          .Text(token.Value)
-                          .Text(ConsoleColor.DarkGray, "\'");
+                    buffer.Text(ConsoleColor.DarkYellow, String.Format("[{0}]", GetEnumName(token.Type)));
+
+                    if (!String.IsNullOrEmpty(token.Value))
+                        buffer.Text(" ")
+                              .Text(ConsoleColor.DarkGray, "\'")
+                              .Text(token.Value)
+                              .Text(ConsoleColor.DarkGray, "\'");
 
                     if (token.Tag != null)
                         buffer.Text(" ")
