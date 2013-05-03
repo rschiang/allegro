@@ -25,7 +25,14 @@ namespace Allegro.Test.SharpLex
                     LexicalToken token = lexer.Current;
                     buffer.Text(ConsoleColor.DarkYellow, String.Format("[{0}]", GetEnumName(token.Type)))
                           .Text(" ")
-                          .Line(String.Format(@"""{0}"" ""{1}""", token.Value, token.Tag));
+                          .Text(ConsoleColor.Gray, "\'")
+                          .Text(token.Value)
+                          .Text(ConsoleColor.Gray, "\'")
+                          .Text(" ")
+                          .Text(ConsoleColor.Gray, "\'")
+                          .Text(token.Tag.ToString())
+                          .Text(ConsoleColor.Gray, "\'")
+                          .Line();
                 }
             }
             catch (Exception ex) {

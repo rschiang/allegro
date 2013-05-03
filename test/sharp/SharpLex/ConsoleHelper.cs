@@ -21,6 +21,12 @@ namespace Allegro.Test.SharpLex
             return this;
         }
 
+        public ConsoleHelper Line()
+        {
+            Console.WriteLine();
+            return this;
+        }
+
         public ConsoleHelper Line(string value)
         {
             Console.WriteLine(value);
