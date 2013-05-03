@@ -362,13 +362,13 @@ namespace Allegro
 
                         // Match strict and contexual keywords
                         foreach (string keyword in strictKeywords)
-                            if (String.Equals(identifier, id_lower)) {
+                            if (String.Equals(keyword, id_lower)) {
                                 // TODO: Set strict token type
                                 return new LexicalToken(LexicalTokenType.Keyword, id_lower, true);
                             }
 
                         foreach (string keyword in contextKeywords)
-                            if (String.Equals(identifier, id_lower)) {
+                            if (String.Equals(keyword, id_lower)) {
                                 // TODO: Set it as indeterminate keyword
                                 return new LexicalToken(LexicalTokenType.Keyword, id_lower, false);
                             }
@@ -643,7 +643,11 @@ namespace Allegro
                     else break;
             }
 
-            throw new SyntaxException(String.Format("Unexpected character {0}.", ch));
+#if DEBUG
+            throw new SyntaxException(String.Format("Unexpected character '{0}' (U+{1:X4})", ch, (int)ch));
+#else
+            throw new SyntaxException(String.Format("Unexpected character '{0}'", ch));
+#endif
         }
 
         private LexicalToken ProcessDirective(char ch)
