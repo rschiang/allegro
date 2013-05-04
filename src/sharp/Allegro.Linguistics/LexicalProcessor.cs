@@ -196,11 +196,7 @@ namespace Allegro
         #region "Private Methods"
         private LexicalToken ProcessOpen(char ch)
         {
-            if (ch == '.') {
-                if (!_newline)
-                    throw new SyntaxException("Preprocessor directives must appear as " +
-                                              "the first non-whitespace character on a line");
-
+            if (ch == '.' && _newline) {
                 _state = State.Directive;
                 return null;
             }
@@ -299,6 +295,7 @@ namespace Allegro
                 return null;
             }
 
+            _state = State.Open;
             return new LexicalToken(LexicalTokenType.Comment, ConsumeBuffer());
         }
 
@@ -425,18 +422,27 @@ namespace Allegro
             // Int: \d+ | 0x[\da-fA-F]+
             // Real: \d*\.\d+
             if (nanostate == -1) {
+                _processState = 0;
                 if (ch == '0') {
                     ReadChar();
                     if (sourceBuffer.Peek() == 'x') {
-                        nanostate = 16;
+                        ReadChar();
+                        _processState = 16;
                         return null;
                     }
                     _textBuffer.Append('0');    // Compensate the zero
+                    return null;
                 }
                 if (ch == '.') {
-                    _textBuffer.Append('0');    // Abbreviation form
+                    ReadChar();
+                    int ahead = sourceBuffer.Peek();
+                    if (ahead > 0 && IsDigit((char)ahead)) {
+                        _textBuffer.Append("0.");    // Abbreviation form
+                        return null;
+                    }
+                    _state = State.Open;
+                    return new LexicalToken(LexicalTokenType.Operator, "."); // Dot operator
                 }
-                nanostate = 0;
             }
 
             if (IsDigit(ch)) {
@@ -538,22 +544,31 @@ namespace Allegro
             {
                 case '+':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "+");
                 case '-':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "-");
                 case '*':
-                    _textBuffer.Append(ReadChar());
-                    if (_textBuffer.Length > 0)
+                    if (_textBuffer.Length > 0) {
+                        ReadChar(); ConsumeBuffer();
+                        _state = State.Open;
                         return new LexicalToken(LexicalTokenType.Operator, "**");
-                    else return null; // If it's a single *, default will handle for us
-                case '/':
+                    }
                     _textBuffer.Append(ReadChar());
-                    if (_textBuffer.Length > 0)
+                    return null; // If it's a single *, default will handle for us
+                case '/':
+                    if (_textBuffer.Length > 0) {
+                        ReadChar(); ConsumeBuffer();
+                        _state = State.Open;
                         return new LexicalToken(LexicalTokenType.Operator, "//"); // Modulus
-                    else return null; // If it's a single /, default will handle for us
+                    }
+                    _textBuffer.Append(ReadChar());
+                    return null; // If it's a single /, default will handle for us
                 case '<':
                     ReadChar();
+                    _state = State.Open;
                     switch (sourceBuffer.Peek())
                     {
                         case '<': // Left-shift
@@ -567,6 +582,7 @@ namespace Allegro
                     }
                 case '>':
                     ReadChar();
+                    _state = State.Open;
                     switch (sourceBuffer.Peek())
                     {
                         case '>': // Right-shift
@@ -580,6 +596,7 @@ namespace Allegro
                     }
                 case '=':
                     ReadChar();
+                    _state = State.Open;
                     switch (sourceBuffer.Peek())
                     {
                         case '=': // Equal
@@ -591,53 +608,69 @@ namespace Allegro
                 case '!':
                     ReadChar();
                     if (sourceBuffer.Peek() != '=') break;
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "!=");
                 case '%':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "%"); // Format
                 case '&':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "&"); // Bitwise AND
                 case '|':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "|"); // Bitwise OR
                 case '^':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "^"); // Bitwise XOR
                 case '~':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "~"); // Bitwise NOT
                 case '.':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "."); // Dot operator
                 case ',':
                     ReadChar();
-                    return new LexicalToken(LexicalTokenType.Operator, "~"); // Comma seperator
+                    _state = State.Open;
+                    return new LexicalToken(LexicalTokenType.Operator, ","); // Comma seperator
                 case '(':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "("); // Left P.
                 case ')':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, ")"); // Right P.
                 case '[':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "["); // Left Indexer B.
                 case ']':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "]"); // Right Indexer B.
                 case '{':
                     ReadChar();
-                    return new LexicalToken(LexicalTokenType.Operator, "~"); // Left Entity B.
+                    _state = State.Open;
+                    return new LexicalToken(LexicalTokenType.Operator, "{"); // Left Entity B.
                 case '}':
                     ReadChar();
-                    return new LexicalToken(LexicalTokenType.Operator, "~"); // Right Entity B.
+                    _state = State.Open;
+                    return new LexicalToken(LexicalTokenType.Operator, "}"); // Right Entity B.
                 case ':':
                     ReadChar();
+                    _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, ":"); // Colon
                 default:
                     if (_textBuffer.Length > 0)
                     {
                         // Pending operator.
+                        _state = State.Open;
                         return new LexicalToken(LexicalTokenType.Operator, ConsumeBuffer());
                     }
                     else break;
