@@ -13,34 +13,29 @@ namespace Allegro
         /// <summary>
         /// Creates a new instance of <c>LexicalProcessor</c>.
         /// </summary>
-        /// <param name="source">An enumerable sequence of lexical tokens.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <c>source</c> is <c>null</c>.</exception>
-    	public SyntaticalProcessor(IEnumerable<LexicalToken> source)
+    	public SyntaticalProcessor()
         {
-            if (source == null) throw new ArgumentNullException("source");
-            sourceBuffer = source;
         }
         #endregion
 
         #region "Methods"
 
         /// <summary>
-        /// Parse the next syntatical element.
+        /// Parse Allegro code elements from specified sequence of lexical tokens.
         /// </summary>
-        /// <returns><c>true</c> if the next token was read successfully; otherwise, <c>false</c>.</returns>
-        public virtual bool Read()
+        /// <param name="source">An enumerable sequence of lexical tokens.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <c>source</c> is <c>null</c>.</exception>
+        /// <returns>An instance of <c>IList</c> containing zero or more code elements.</returns>
+        public virtual bool Parse(IEnumerable<LexicalToken> source)
         {
-            // TODO
+            if (source == null) throw new ArgumentNullException("source");
+            sourceBuffer = source;
+            // TODO: Implement CodeDOM and parser
         }
         #endregion
 
-        #region "Properties"
-        
-        #endregion
-
         #region "Fields"
-        protected IEnumerable<LexicalToken> sourceBuffer;
-        private IList<LexicalToken> queue;
+
         #endregion
     }
 }
