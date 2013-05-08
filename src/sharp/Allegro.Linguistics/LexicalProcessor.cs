@@ -545,16 +545,16 @@ namespace Allegro
                 case '+':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "+");
+                    return new LexicalToken(LexicalTokenType.Operator, "+", OperatorType.Add);
                 case '-':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "-");
+                    return new LexicalToken(LexicalTokenType.Operator, "-", OperatorType.Subtract);
                 case '*':
                     if (_textBuffer.Length > 0) {
                         ReadChar(); ConsumeBuffer();
                         _state = State.Open;
-                        return new LexicalToken(LexicalTokenType.Operator, "**");
+                        return new LexicalToken(LexicalTokenType.Operator, "**", OperatorType.Exponent);
                     }
                     _textBuffer.Append(ReadChar());
                     return null; // If it's a single *, default will handle for us
@@ -562,7 +562,7 @@ namespace Allegro
                     if (_textBuffer.Length > 0) {
                         ReadChar(); ConsumeBuffer();
                         _state = State.Open;
-                        return new LexicalToken(LexicalTokenType.Operator, "//"); // Modulus
+                        return new LexicalToken(LexicalTokenType.Operator, "//", OperatorType.Modulus);
                     }
                     _textBuffer.Append(ReadChar());
                     return null; // If it's a single /, default will handle for us
@@ -573,12 +573,12 @@ namespace Allegro
                     {
                         case '<': // Left-shift
                             ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "<<");
+                            return new LexicalToken(LexicalTokenType.Operator, "<<", OperatorType.LeftShift);
                         case '=': // Lesser than or equal
                             ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "<=");
+                            return new LexicalToken(LexicalTokenType.Operator, "<=", OperatorType.LesserThanOrEqual);
                         default: // Lesser than
-                            return new LexicalToken(LexicalTokenType.Operator, "<");
+                            return new LexicalToken(LexicalTokenType.Operator, "<", OperatorType.LesserThan);
                     }
                 case '>':
                     ReadChar();
@@ -587,12 +587,12 @@ namespace Allegro
                     {
                         case '>': // Right-shift
                             ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, ">>");
+                            return new LexicalToken(LexicalTokenType.Operator, ">>", OperatorType.RightShift);
                         case '=': // Greater than or equal
                             ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, ">=");
+                            return new LexicalToken(LexicalTokenType.Operator, ">=", OperatorType.GreaterThanOrEqual);
                         default: // Greater than
-                            return new LexicalToken(LexicalTokenType.Operator, ">");
+                            return new LexicalToken(LexicalTokenType.Operator, ">", OperatorType.GreaterThan);
                     }
                 case '=':
                     ReadChar();
@@ -601,71 +601,71 @@ namespace Allegro
                     {
                         case '=': // Equal
                             ReadChar();
-                            return new LexicalToken(LexicalTokenType.Operator, "==");
+                            return new LexicalToken(LexicalTokenType.Operator, "==", OperatorType.Equal);
                         default: // Assign
-                            return new LexicalToken(LexicalTokenType.Operator, "=");
+                            return new LexicalToken(LexicalTokenType.Operator, "=", OperatorType.Assign);
                     }
                 case '!':
                     ReadChar();
                     if (sourceBuffer.Peek() != '=') break;
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "!=");
+                    return new LexicalToken(LexicalTokenType.Operator, "!=", OperatorType.NotEqual);
                 case '%':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "%"); // Format
+                    return new LexicalToken(LexicalTokenType.Operator, "%", OperatorType.Format);
                 case '&':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "&"); // Bitwise AND
+                    return new LexicalToken(LexicalTokenType.Operator, "&", OperatorType.BitwiseAnd);
                 case '|':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "|"); // Bitwise OR
+                    return new LexicalToken(LexicalTokenType.Operator, "|", OperatorType.BitwiseOr);
                 case '^':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "^"); // Bitwise XOR
+                    return new LexicalToken(LexicalTokenType.Operator, "^", OperatorType.BitwiseXor);
                 case '~':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "~"); // Bitwise NOT
+                    return new LexicalToken(LexicalTokenType.Operator, "~", OperatorType.BitwiseNot);
                 case '.':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "."); // Dot operator
+                    return new LexicalToken(LexicalTokenType.Operator, ".", OperatorType.Dot); // Dot operator
                 case ',':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, ","); // Comma seperator
+                    return new LexicalToken(LexicalTokenType.Operator, ",", OperatorType.Comma); // Comma seperator
                 case '(':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "("); // Left P.
+                    return new LexicalToken(LexicalTokenType.Operator, "(", OperatorType.LeftParenthese);
                 case ')':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, ")"); // Right P.
+                    return new LexicalToken(LexicalTokenType.Operator, ")", OperatorType.RightParenthese);
                 case '[':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "["); // Left Indexer B.
+                    return new LexicalToken(LexicalTokenType.Operator, "[", OperatorType.LeftSquareBracket); // Left Indexer B.
                 case ']':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "]"); // Right Indexer B.
+                    return new LexicalToken(LexicalTokenType.Operator, "]", OperatorType.RightSquareBracket); // Right Indexer B.
                 case '{':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "{"); // Left Entity B.
+                    return new LexicalToken(LexicalTokenType.Operator, "{", OperatorType.LeftCurlyBracket); // Left Entity B.
                 case '}':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "}"); // Right Entity B.
+                    return new LexicalToken(LexicalTokenType.Operator, "}", OperatorType.RightCurlyBracket); // Right Entity B.
                 case ':':
                     ReadChar();
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, ":"); // Colon
+                    return new LexicalToken(LexicalTokenType.Operator, ":", OperatorType.Colon);
                 default:
                     if (_textBuffer.Length > 0)
                     {

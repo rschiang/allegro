@@ -123,6 +123,11 @@ namespace Allegro
         Comma,
 
         /// <summary>
+        /// Colon. (:)
+        /// </summary>
+        Colon,
+
+        /// <summary>
         /// Left parenthese.
         /// </summary>
         LeftParenthese,
