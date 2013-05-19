@@ -350,6 +350,13 @@ namespace Allegro
                         return null;
                     }
 
+                    if (ch == '~' /* && !strictParsing */ ) { // Identifier wildcard
+                        // TODO: Implement strict parsing
+                        // POINT: Wildcard at the end? (ex. Con~.Re~Line)
+                        _textBuffer.Append(ReadChar());
+                        return null;
+                    }
+
                     _state = State.Open;
 
                     string identifier = ConsumeBuffer();
@@ -607,9 +614,11 @@ namespace Allegro
                     }
                 case '!':
                     ReadChar();
-                    if (sourceBuffer.Peek() != '=') break;
                     _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "!=", OperatorType.NotEqual);
+                    if (sourceBuffer.Peek() != '=')
+                        return new LexicalToken(LexicalTokenType.Operator, "!", OperatorType.BitwiseNot); // ~ used as wildcard
+                    else
+                        return new LexicalToken(LexicalTokenType.Operator, "!=", OperatorType.NotEqual);
                 case '%':
                     ReadChar();
                     _state = State.Open;
@@ -626,10 +635,6 @@ namespace Allegro
                     ReadChar();
                     _state = State.Open;
                     return new LexicalToken(LexicalTokenType.Operator, "^", OperatorType.BitwiseXor);
-                case '~':
-                    ReadChar();
-                    _state = State.Open;
-                    return new LexicalToken(LexicalTokenType.Operator, "~", OperatorType.BitwiseNot);
                 case '.':
                     ReadChar();
                     _state = State.Open;
